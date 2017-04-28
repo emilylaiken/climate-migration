@@ -16,7 +16,7 @@ public class Main {
 	static ArrayList<Person> people = new ArrayList<Person>(); //Will contain all 144,043,697 individuals
 	static int num_districts = 0;
 	static int total_pop = 0;
-	static double max_flood_depth = 500;
+	static double max_flood_depth = 500; //Source: Data on 1998 flood from CCAFS Comprehensive Disaster Management Program, https://www.slideshare.net/cgiarclimate/flood-management-in-bangladesh-pd-cdmpii-upd-28-nov13
 	static double average_dist = 0;
 	
 	// Returns a random integer within specified range (including start and end points) 
@@ -102,21 +102,24 @@ public class Main {
         for (int i = 0; i < num_districts; i++) {
         	total_pop += districts.get(i).population;
         }
+        
+        System.out.println("total pop: " + total_pop);
        
         //Get people data by semi-random production
         System.out.println("Loading population data...");
         //Variables that will determine the distribution of characteristics
         int min_age = 0;
         int max_age = 60;
-        int min_age_employment = 10;
-        int min_age_marriage = 10;
-        int min_age_property = 10;
-        double prob_employed = 0.5;
-        double prob_married = 0.5;
-        double prob_property = 0.5;
+        int min_age_employment = 14; //The legal minimum age of employment in Bangladesh according to UNICEF: https://www.unicef.org/bangladesh/children_4863.html
+        int min_age_marriage = 18; //The legal minimum age of marraige in Bangladesh: http://www.girlsnotbrides.org/child-marriage/bangladesh/
+        int min_age_property = 18; //Taken as the leagl age to vote: http://chartsbin.com/view/re6
+        int labor_force_size = 72027270; //Data from http://data.worldbank.org/indicator/SL.TLF.TOTL.IN
+        double prob_employed = labor_force_size/total_pop;
+        double prob_married = 0.7; //An educated guess, based on worldwide marraige rates and https://www.hrw.org/news/2015/06/09/bangladesh-girls-damaged-child-marriage
+        double prob_property = 0.8; //No data available on Bangldesh, but took home ownership rate for India: https://en.wikipedia.org/wiki/List_of_countries_by_home_ownership_rate
         //Calculate 5 income "buckets"; 1/5 of the people will be allocated to each of the buckets
         double gdp_per_cap = 957.82; // Data from World Bank
-        double[] income_inequality = {.0522, .0910, .1333, .2056, .5179}; //Data from XX
+        double[] income_inequality = {.0522, .0910, .1333, .2056, .5179}; //Data from paper by professor at University of Dhaka, http://bea-bd.org/site/images/pdf/063.pdf
         double[] incomes_by_quintile = new double[5];
         for(int i = 0; i < 5; i++) {
         	incomes_by_quintile[i] = (gdp_per_cap*total_pop*income_inequality[i]) / (total_pop/5); 
@@ -124,7 +127,44 @@ public class Main {
         int wealth_variance = 100; // The amount wealth is allowed to vary within each quintile--should be no more than 200
         for (int j = 0; j < num_districts; j++) {
         	for (int k=0; k < districts.get(j).population; k++) {
-        		int age = randomWithRange(min_age, max_age); //Age is uniformly distributed between min and max
+        		int age;
+        		int age_indicator = randomWithRange(0, 100);
+        		if (age_indicator < 10) {
+        			age = randomWithRange(0, 4);//Age is distributed into 5-year buckets according to data at https://en.wikipedia.org/wiki/Demographics_of_Bangladesh. Within each bucket, age is uniformly distributed.
+        		}
+        		else if (age_indicator < 23) {
+        			age = randomWithRange(5, 9);
+        		}
+        		else if (age_indicator < 35) {
+        			age = randomWithRange(10, 14);
+        		}
+        		else if (age_indicator < 44) {
+        			age = randomWithRange(15, 19);
+        		}
+        		else if (age_indicator < 53) {
+        			age = randomWithRange(20, 24);
+        		}
+        		else if (age_indicator < 62) {
+        			age = randomWithRange(25, 29);
+        		}
+        		else if (age_indicator < 69) {
+        			age = randomWithRange(30, 34);
+        		}
+        		else if (age_indicator < 76) {
+        			age = randomWithRange(35, 39);
+        		}
+        		else if (age_indicator < 82) {
+        			age = randomWithRange(40, 44);
+        		}
+        		else if (age_indicator < 90) {
+        			age = randomWithRange(45, 54);
+        		}
+        		else if (age_indicator < 98) {
+        			age = randomWithRange(55, 74);
+        		}
+        		else {
+        			age = randomWithRange(75, 100);
+        		}
         		int wealth_quintile = randomWithRange(0, 4);
         		double wealth = incomes_by_quintile[wealth_quintile] + randomWithRange(-wealth_variance, wealth_variance);
         		boolean property = false;
@@ -238,27 +278,27 @@ public class Main {
 		for (int j = 0; j < total_pop; j++) {
 			Person affected_person = people.get(j);
 			if (affected_districts.contains(affected_person.loc)) {
-				int prob_move = 10;
+				int prob_move = 0; //To begin with, people are as likely to move as they are not to
 				//Being married makes people less likely to move than if they are single
 				if (affected_person.married) {
 					prob_move = prob_move - 3;
 				}
 				else {
-					prob_move = prob_move + 1;
+					prob_move = prob_move + 3;
 				}
 				//Employed people are less likely to move than unemployed ones, because moving will mean losing their job
 				if (affected_person.employed) {
 					prob_move = prob_move - 6; 
 				}
 				else {
-					prob_move = prob_move + 2;
+					prob_move = prob_move + 6;
 				}
 				//Owning property makes a person less likely to move, because moving will mean losing their property
 				if (affected_person.property) {
 					prob_move = prob_move - 6;
 				}
 				else {
-					prob_move = prob_move + 2;
+					prob_move = prob_move + 6;
 				}
 				//If a person is between 40 and 50, they are slightly less likely to move because they have family, etc.
 				if (affected_person.age > 40 && affected_person.age < 50) {
@@ -269,7 +309,7 @@ public class Main {
 					prob_move = prob_move - 5;
 				}
 				else {
-					prob_move = prob_move + 2;
+					prob_move = prob_move + 3;
 				}
 				//Wealthy people are more able to move than poor ones. However, extremely wealthy people are less 
 				//likely to move because they can just fix everything and go on with their lives.
@@ -296,13 +336,13 @@ public class Main {
 					prob_move = prob_move - 5;
 				} 
 				//If the flood isn't too severe, people are less likely to move
-				if (severity < 300) {
+				if (severity < 250) {
 					prob_move = prob_move - 5;
 				}
 				//Add some randomness to represent other factors
-				prob_move = prob_move + randomWithRange(-20, 10);
-				//If the probability is now greater than 19, the person will move
-				if (prob_move >= 19) {
+				prob_move = prob_move + randomWithRange(-30, 10);
+				//If the probability is now greater than 0, the person will move
+				if (prob_move >= 0) {
 					//When the person moves, they lose $500 (or all their money if they have less than that in total)
 					affected_person.wealth -= 500;
 					people.get(j).wealth -= 500;
@@ -320,6 +360,7 @@ public class Main {
 			}
 		}
 		int num_moving = will_move.size();
+		System.out.println("percent moving:" +  ((double) (num_moving)) / ((double) (total_pop)));
 		
 		//Calculate where each person will move to
 		System.out.println("Calculating where they will move to...");
