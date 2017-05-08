@@ -102,14 +102,10 @@ public class Main {
         for (int i = 0; i < num_districts; i++) {
         	total_pop += districts.get(i).population;
         }
-        
-        System.out.println("total pop: " + total_pop);
        
         //Get people data by semi-random production
         System.out.println("Loading population data...");
         //Variables that will determine the distribution of characteristics
-        int min_age = 0;
-        int max_age = 60;
         int min_age_employment = 14; //The legal minimum age of employment in Bangladesh according to UNICEF: https://www.unicef.org/bangladesh/children_4863.html
         int min_age_marriage = 18; //The legal minimum age of marraige in Bangladesh: http://www.girlsnotbrides.org/child-marriage/bangladesh/
         int min_age_property = 18; //Taken as the leagl age to vote: http://chartsbin.com/view/re6
@@ -124,7 +120,7 @@ public class Main {
         for(int i = 0; i < 5; i++) {
         	incomes_by_quintile[i] = (gdp_per_cap*total_pop*income_inequality[i]) / (total_pop/5); 
         }
-        int wealth_variance = 100; // The amount wealth is allowed to vary within each quintile--should be no more than 200
+        int wealth_variance = (int) (gdp_per_cap/10); // The amount wealth is allowed to vary within each quintile--should be no more than 200
         for (int j = 0; j < num_districts; j++) {
         	for (int k=0; k < districts.get(j).population; k++) {
         		int age;
@@ -242,7 +238,7 @@ public class Main {
 		}
 		else if (river == "ganges") {
 			for (int i = 0; i < num_districts; i++) {
-				if (districts.get(i).jamuna == 1) {
+				if (districts.get(i).ganges == 1) {
 					affected_districts.add(districts.get(i));
 					System.out.println(districts.get(i).name + " is directly affected");
 				}
@@ -250,7 +246,7 @@ public class Main {
 		}
 		else if (river == "meghna") {
 			for (int i = 0; i < num_districts; i++) {
-				if (districts.get(i).jamuna == 1) {
+				if (districts.get(i).meghna == 1) {
 					affected_districts.add(districts.get(i));
 					System.out.println(districts.get(i).name + " is directly affected");
 				}
@@ -259,6 +255,7 @@ public class Main {
 
 		//run through districts, find all districts close enough to also be affected
 		int num_directly_affected = affected_districts.size();
+		System.out.println("num directly affected: " + num_directly_affected);
 		for (int i = 0; i < num_districts; i++) {
 			if (!affected_districts.contains(districts.get(i))) {
 				for (int j = 0; j < num_directly_affected; j++) {
@@ -271,6 +268,8 @@ public class Main {
 				}
 			}
 		}
+		System.out.println("num secondarily affected: " + secondarily_affected.size());
+		System.out.println("num affected total: " + affected_districts.size());
 		
 		/* run through people, find all people who are in affected districts. Calculate the probability they will move
 		using a point system. Create a list of all those who are moving. */
@@ -281,10 +280,10 @@ public class Main {
 				int prob_move = 0; //To begin with, people are as likely to move as they are not to
 				//Being married makes people less likely to move than if they are single
 				if (affected_person.married) {
-					prob_move = prob_move - 3;
+					prob_move = prob_move + 3;
 				}
 				else {
-					prob_move = prob_move + 3;
+					prob_move = prob_move - 3;
 				}
 				//Employed people are less likely to move than unemployed ones, because moving will mean losing their job
 				if (affected_person.employed) {
@@ -326,18 +325,24 @@ public class Main {
 					prob_move = prob_move - 2;
 				}
 				else if (affected_person.wealth < 1000) {
-					prob_move = prob_move + 5;
+					prob_move = prob_move + 3;
 				}
 				else {
 					prob_move = prob_move + 1;
 				}
 				//People in secondarily affected regions are less likely to move than those in directly affected regions
 				if ((affected_person.loc.ganges == 0 && river == "ganges") || (affected_person.loc.meghna == 0 && river == "meghna") || (affected_person.loc.jamuna == 0 && river == "jamuna")) {
-					prob_move = prob_move - 5;
+					prob_move = prob_move - 7;
 				} 
+				else {
+					prob_move = prob_move + 2; 
+				}
 				//If the flood isn't too severe, people are less likely to move
 				if (severity < 250) {
-					prob_move = prob_move - 5;
+					prob_move = prob_move - 3;
+				}
+				else {
+					prob_move = prob_move + 3;
 				}
 				//Add some randomness to represent other factors
 				prob_move = prob_move + randomWithRange(-30, 10);
@@ -394,12 +399,12 @@ public class Main {
 					scores[b] += 10;
 				}
 				//Districts that are close by are more likely to be chosen
-				if (distBetween(districts.get(b), moving_person.loc) < average_dist / 4) {
-					scores[b] += 15;
-				}
-				else if (distBetween(districts.get(b), moving_person.loc) < average_dist / 2) {
+			    if (distBetween(districts.get(b), moving_person.loc) < average_dist / 2) {
 					scores[b] += 7;
 				}  
+			    if (distBetween(districts.get(b), moving_person.loc) < average_dist / 4) {
+					scores[b] += 7;
+				}
 				//Add in some randomness to represent variance
 				scores[b] += randomWithRange(-15, 15); 		
 			}
@@ -444,6 +449,6 @@ public class Main {
 		getdata();
 		//printpop();
 		//Induce flood
-		flood("ganges", 400);
+		flood("meghna", 400);
 	}
 }
